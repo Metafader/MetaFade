@@ -13,10 +13,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.metafade.ui.theme.MetaFadeTheme
 
@@ -42,18 +45,24 @@ class MainActivity : ComponentActivity() {
                     onResult = {uris -> selectedImageUris = uris}
                 )
 
-                MyApp(
-                    modifier = Modifier.fillMaxSize(),
-                    // Passing callbacks(functions) down for state hoisting
-                    onSingleButtonClicked = { singlePhotoPickerLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )},
-                    onMultipleButtonClicked = {multiplePhotoPickerLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )},
-                    selectedImageUri = selectedImageUri,
-                    selectedImageUris = selectedImageUris
-                )
+                // Changing composable for UI
+                if(selectedImageUri == null && selectedImageUris == emptyList<Uri>())
+                    MyApp(
+                        modifier = Modifier.fillMaxSize(),
+                        // Passing callbacks(functions) down for state hoisting
+                        onSingleButtonClicked = { singlePhotoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )},
+                        onMultipleButtonClicked = {multiplePhotoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )}
+                    )
+                else
+                    ShowSelectedImages(
+                        modifier = Modifier.fillMaxSize(),
+                        selectedImageUri = selectedImageUri,
+                        selectedImageUris = selectedImageUris
+                    )
             }
         }
     }
@@ -64,35 +73,59 @@ class MainActivity : ComponentActivity() {
 fun MyApp(
     modifier: Modifier = Modifier,
     onSingleButtonClicked: ()->Unit,
-    onMultipleButtonClicked: ()->Unit,
+    onMultipleButtonClicked: ()->Unit
+    ) {
+    Column(modifier
+        .padding(horizontal = 2.dp, vertical = 2.dp)) {
+
+        Text("MetaFade",
+            fontSize = 40.sp,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(vertical = 60.dp)
+        )
+
+        Text("Select Image(s)",
+            fontSize = 20.sp,
+            modifier = Modifier
+                .padding(top = 300.dp)
+                .align(Alignment.CenterHorizontally)
+                .padding(vertical = 7.dp)
+        )
+
+        // For buttons
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            Button(onClick = onSingleButtonClicked) {
+                Text(text = "Single")
+            }
+
+            Button(onClick = onMultipleButtonClicked) {
+                Text(text = "Multiple")
+            }
+        }
+    }
+}
+
+@Composable
+fun ShowSelectedImages(
+    modifier: Modifier = Modifier,
     selectedImageUri: Uri?,
     selectedImageUris: List<Uri>
     ) {
-    LazyColumn(modifier.padding(horizontal = 2.dp, vertical = 2.dp)) {
-
-        // For buttons
-        item { 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                Button(onClick = onSingleButtonClicked) {
-                    Text(text = "Select Single\n      Image")
-                }
-
-                Button(onClick = onMultipleButtonClicked) {
-                    Text(text = "Select Multiple\n        Image")
-                }
-            }
-        }
-
+    LazyColumn(modifier.padding(horizontal = 2.dp, vertical = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         item {
             AsyncImage(
                 model = selectedImageUri,
                 contentDescription = null,
-                modifier = modifier.padding(3.dp),
+                modifier = Modifier.padding(3.dp),
                 contentScale = ContentScale.Fit
             )
         }
@@ -101,23 +134,20 @@ fun MyApp(
             AsyncImage(
                 model = uri,
                 contentDescription = null,
-                modifier = modifier.padding(3.dp),
+                modifier = Modifier.padding(3.dp),
                 contentScale = ContentScale.Fit
             )
         }
     }
 }
 
-
-@Preview(showBackground = true, widthDp = 320, heightDp = 320)
+@Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     MetaFadeTheme {
         MyApp(
             onSingleButtonClicked = {}, // empty function as this is preview
-            onMultipleButtonClicked = {},
-            selectedImageUri = null,
-            selectedImageUris = emptyList()
+            onMultipleButtonClicked = {}
         )
     }
 }
