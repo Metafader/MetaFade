@@ -61,7 +61,11 @@ class MainActivity : ComponentActivity() {
                     ShowSelectedImages(
                         modifier = Modifier.fillMaxSize(),
                         selectedImageUri = selectedImageUri,
-                        selectedImageUris = selectedImageUris
+                        selectedImageUris = selectedImageUris,
+                        onClearButtonClicked = {
+                            selectedImageUri = null
+                            selectedImageUris = emptyList()
+                        }
                     )
             }
         }
@@ -115,12 +119,20 @@ fun MyApp(
 @Composable
 fun ShowSelectedImages(
     modifier: Modifier = Modifier,
+    onClearButtonClicked: ()->Unit,
     selectedImageUri: Uri?,
     selectedImageUris: List<Uri>
     ) {
     LazyColumn(modifier.padding(horizontal = 2.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally
         ) {
+        item {
+            Button(onClick = onClearButtonClicked,
+            modifier.padding(vertical = 5.dp)) {
+                Text("Clear")
+            }
+        }
+
         item {
             AsyncImage(
                 model = selectedImageUri,
@@ -138,6 +150,18 @@ fun ShowSelectedImages(
                 contentScale = ContentScale.Fit
             )
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320, heightDp = 320)
+@Composable
+fun ShowSelectedImagePreview() {
+    MetaFadeTheme {
+        ShowSelectedImages(
+            onClearButtonClicked = {},
+            selectedImageUri = null,
+            selectedImageUris = emptyList()
+        )
     }
 }
 
