@@ -16,10 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.exifinterface.media.ExifInterface
 import coil.compose.AsyncImage
 import com.example.metafade.ui.theme.MetaFadeTheme
 
@@ -53,7 +55,7 @@ class MainActivity : ComponentActivity() {
                         onSingleButtonClicked = { singlePhotoPickerLauncher.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )},
-                        onMultipleButtonClicked = {multiplePhotoPickerLauncher.launch(
+                        onMultipleButtonClicked = { multiplePhotoPickerLauncher.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )}
                     )
@@ -102,7 +104,7 @@ fun MyApp(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(horizontal = 5.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             Button(onClick = onSingleButtonClicked) {
@@ -133,24 +135,60 @@ fun ShowSelectedImages(
             }
         }
 
-        item {
-            AsyncImage(
-                model = selectedImageUri,
-                contentDescription = null,
-                modifier = Modifier.padding(3.dp),
-                contentScale = ContentScale.Fit
-            )
-        }
+        if(selectedImageUri != null)
+            item {
+                AsyncImage(
+                    model = selectedImageUri,
+                    contentDescription = null,
+                    modifier = Modifier.padding(3.dp),
+                    contentScale = ContentScale.Fit
+                )
 
-        items(selectedImageUris) { uri->
-            AsyncImage(
-                model = uri,
-                contentDescription = null,
-                modifier = Modifier.padding(3.dp),
-                contentScale = ContentScale.Fit
-            )
-        }
+                val uriPath = selectedImageUri.path
+                val exif = ExifInterface(LocalContext.current.applicationContext.contentResolver.openInputStream(selectedImageUri)!!)
+
+                Text(
+                    text = showExif(exif),
+                    modifier = Modifier.padding(3.dp)
+                )
+            }
+
+        else
+            items(selectedImageUris) { uri->
+                AsyncImage(
+                    model = uri,
+                    contentDescription = null,
+                    modifier = Modifier.padding(3.dp),
+                    contentScale = ContentScale.Fit
+                )
+
+                val uriPath = uri.path
+                val exif = ExifInterface(LocalContext.current.applicationContext.contentResolver.openInputStream(uri)!!)
+
+                Text(
+                    text = showExif(exif),
+                    modifier = Modifier.padding(3.dp)
+                )
+            }
     }
+}
+
+private fun showExif(exif: ExifInterface) : String {
+    val metadataString = StringBuilder()
+    metadataString.append("Latitude Longitude : ").append(exif.latLong).append(" \n")
+    metadataString.append("Image Length : ").append(exif.getAttribute(ExifInterface.TAG_IMAGE_LENGTH)).append(" \n")
+    metadataString.append("Image Width : ").append(exif.getAttribute(ExifInterface.TAG_IMAGE_WIDTH)).append(" \n")
+    metadataString.append("Image Description : ").append(exif.getAttribute(ExifInterface.TAG_IMAGE_DESCRIPTION)).append(" \n")
+    metadataString.append("Image Length : ").append(exif.getAttribute(ExifInterface.TAG_IMAGE_LENGTH)).append(" \n")
+    metadataString.append("Image DateTime : ").append(exif.getAttribute(ExifInterface.TAG_DATETIME)).append(" \n")
+    metadataString.append("Image Model : ").append(exif.getAttribute(ExifInterface.TAG_MODEL)).append(" \n")
+    metadataString.append("Camera Owner  : ").append(exif.getAttribute(ExifInterface.TAG_CAMERA_OWNER_NAME)).append(" \n")
+    metadataString.append("Image CopyRight : ").append(exif.getAttribute(ExifInterface.TAG_COPYRIGHT)).append(" \n")
+    metadataString.append("Exif Version : ").append(exif.getAttribute(ExifInterface.TAG_EXIF_VERSION)).append(" \n")
+    metadataString.append("Flash : ").append(exif.getAttribute(ExifInterface.TAG_FLASH)).append(" \n")
+    metadataString.append("File Source : ").append(exif.getAttribute(ExifInterface.TAG_FILE_SOURCE)).append(" \n")
+
+    return metadataString.toString()
 }
 
 @Preview(showBackground = true, widthDp = 320, heightDp = 320)
