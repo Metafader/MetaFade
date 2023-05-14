@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -144,7 +145,7 @@ fun ShowSelectedImages(
                     contentScale = ContentScale.Fit
                 )
 
-                val uriPath = selectedImageUri.path
+//                val uriPath = selectedImageUri.path
                 val exif = ExifInterface(LocalContext.current.applicationContext.contentResolver.openInputStream(selectedImageUri)!!)
 
                 Text(
@@ -155,25 +156,40 @@ fun ShowSelectedImages(
 
         else
             items(selectedImageUris) { uri->
-                AsyncImage(
-                    model = uri,
-                    contentDescription = null,
-                    modifier = Modifier.padding(3.dp),
-                    contentScale = ContentScale.Fit
-                )
-
-                val uriPath = uri.path
-                val exif = ExifInterface(LocalContext.current.applicationContext.contentResolver.openInputStream(uri)!!)
-
-                Text(
-                    text = showExif(exif),
-                    modifier = Modifier.padding(3.dp)
-                )
+                ShowImageMeta(uri = uri)
             }
     }
 }
 
+@Composable
+private fun ShowImageMeta(uri: Uri) {
+    
+    var showMeta by rememberSaveable() {
+        mutableStateOf(false)
+    }
+
+    val exif = ExifInterface(LocalContext.current.applicationContext.contentResolver.openInputStream(uri)!!)
+
+    AsyncImage(
+        model = uri,
+        contentDescription = null,
+        modifier = Modifier.padding(3.dp),
+        contentScale = ContentScale.Fit
+    )
+
+    if (showMeta)
+        Text(
+            text = showExif(exif),
+            modifier = Modifier.padding(3.dp)
+        )
+    else
+        Button(onClick = { showMeta = true}) {
+            Text(text = "Show MetaData")
+        } 
+}
 private fun showExif(exif: ExifInterface) : String {
+    exif.setAttribute(ExifInterface.TAG_IMAGE_DESCRIPTION, "Good Image")
+
     val metadataString = StringBuilder()
     metadataString.append("Latitude Longitude : ").append(exif.latLong).append(" \n")
     metadataString.append("Image Length : ").append(exif.getAttribute(ExifInterface.TAG_IMAGE_LENGTH)).append(" \n")
@@ -188,6 +204,7 @@ private fun showExif(exif: ExifInterface) : String {
     metadataString.append("Flash : ").append(exif.getAttribute(ExifInterface.TAG_FLASH)).append(" \n")
     metadataString.append("File Source : ").append(exif.getAttribute(ExifInterface.TAG_FILE_SOURCE)).append(" \n")
 
+//    exif.saveAttributes()
     return metadataString.toString()
 }
 
