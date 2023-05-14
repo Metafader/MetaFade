@@ -6,15 +6,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,12 +54,12 @@ class MainActivity : ComponentActivity() {
                 
                 val singlePhotoPickerLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.OpenDocument(),
-                    onResult = {selectedImageUri = it}
+                    onResult = { selectedImageUri = it }
                 )
 
                 val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.OpenMultipleDocuments(),
-                    onResult = {selectedImageUris = it}
+                    onResult = { selectedImageUris = it }
                 )
 
                 // Changing composable for UI
@@ -131,26 +136,45 @@ fun ShowSelectedImages(
     selectedImageUri: Uri?,
     selectedImageUris: List<Uri>
     ) {
-    LazyColumn(modifier.padding(horizontal = 2.dp, vertical = 2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+
+    Column {
+        Row(
+            Modifier
+                .padding(horizontal = 15.dp, vertical = 4.dp)
+                .fillMaxWidth()
+                .height(40.dp),
+            horizontalArrangement = Arrangement.spacedBy(15.dp),
         ) {
-        item {
             Button(onClick = onClearButtonClicked,
-            modifier.padding(vertical = 5.dp)) {
+                modifier
+                    .padding(vertical = 2.dp)
+                    .weight(1f)) {
                 Text("Clear")
+            }
+
+            Button(onClick = { /*TODO*/ },
+                modifier
+                    .padding(vertical = 2.dp)
+                    .weight(1f)) {
+                Text(text = "Proceed")
             }
         }
 
-        if(selectedImageUri != null)
-            item {
-                ShowImageMeta(uri = selectedImageUri)
-            }
+        LazyColumn(
+            modifier.padding(vertical = 2.dp)
+        ) {
+            if(selectedImageUri != null)
+                item {
+                    ShowImageMeta(uri = selectedImageUri)
+                }
 
-        else
-            items(selectedImageUris) { uri->
-                ShowImageMeta(uri = uri)
-            }
+            else
+                items(selectedImageUris) { uri->
+                    ShowImageMeta(uri = uri)
+                }
+        }
     }
+
 }
 
 
@@ -167,25 +191,41 @@ private fun ShowImageMeta(uri: Uri) {
     val parceableFileDes = LocalContext.current.applicationContext.contentResolver.openFileDescriptor(uri, "rw")
     val exif = ExifInterface(parceableFileDes?.fileDescriptor!!)
 
-    AsyncImage(
-        model = uri,
-        contentDescription = null,
-        modifier = Modifier.padding(3.dp),
-        contentScale = ContentScale.Fit
-    )
+    Card(modifier = Modifier.padding(horizontal = 1.dp, vertical = 10.dp)) {
 
-    if (showMeta)
-        Text(
-            text = showExif(exif),
-            modifier = Modifier.padding(3.dp)
-        )
-    else
-        Button(onClick = { showMeta = !showMeta }) {
-            Text(text = "Show MetaData")
+        Spacer(Modifier.height(4.dp))
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            AsyncImage(
+                model = uri,
+                contentDescription = null,
+                modifier = Modifier.padding(3.dp),
+                contentScale = ContentScale.Fit
+            )
+
+            Button(onClick = { defaultConfigurationSave = !defaultConfigurationSave },
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 10.dp)) {
+                Text(text = if (defaultConfigurationSave) "Save on Device" else "Save on Device & Cloud" )
+            }
+
+            Button(onClick = { showMeta = !showMeta },
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 10.dp)) {
+                Text(text = if(showMeta) "Hide MetaData" else "Show MetaData")
+            }
+
+            if (showMeta)
+                Text(
+                    text = showExif(exif),
+                    modifier = Modifier
+                        .padding(3.dp)
+                        .fillMaxWidth()
+                        .background(colorResource(id = R.color.lightGreen))
+                )
+
+            Spacer(Modifier.height(4.dp))
         }
-
-    Button(onClick = { defaultConfigurationSave = !defaultConfigurationSave }) {
-        Text(text = if (defaultConfigurationSave) "Save on Device" else "Save on Device & Cloud" )
     }
 
     if(defaultConfigurationSave)
