@@ -1,5 +1,6 @@
 package com.example.metafade
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -145,8 +146,8 @@ fun ShowSelectedImages(
                     contentScale = ContentScale.Fit
                 )
 
-//                val uriPath = selectedImageUri.path
-                val exif = ExifInterface(LocalContext.current.applicationContext.contentResolver.openInputStream(selectedImageUri)!!)
+                val uriPath = selectedImageUri.path
+                val exif = ExifInterface(uriPath!!)
 
                 Text(
                     text = showExif(exif),
@@ -161,6 +162,7 @@ fun ShowSelectedImages(
     }
 }
 
+@SuppressLint("Recycle")
 @Composable
 private fun ShowImageMeta(uri: Uri) {
     
@@ -168,7 +170,11 @@ private fun ShowImageMeta(uri: Uri) {
         mutableStateOf(false)
     }
 
-    val exif = ExifInterface(LocalContext.current.applicationContext.contentResolver.openInputStream(uri)!!)
+    var defaultConfigurationSave by rememberSaveable() {
+        mutableStateOf(true)
+    }
+
+    val exif = ExifInterface(LocalContext.current.applicationContext.contentResolver.openFileDescriptor(uri, "rw")?.fileDescriptor!!)
 
     AsyncImage(
         model = uri,
@@ -185,7 +191,37 @@ private fun ShowImageMeta(uri: Uri) {
     else
         Button(onClick = { showMeta = true}) {
             Text(text = "Show MetaData")
-        } 
+        }
+
+    Button(onClick = {defaultConfigurationSave = !defaultConfigurationSave}) {
+        Text(text = if (defaultConfigurationSave) "Save on Device" else "Save on Device & Cloud" )
+    }
+}
+
+private fun defaultConfiguration(exif: ExifInterface) {
+    exif.setAttribute(ExifInterface.TAG_ARTIST, null)
+    exif.setAttribute(ExifInterface.TAG_CAMERA_OWNER_NAME, null)
+    exif.setAttribute(ExifInterface.TAG_COPYRIGHT, null)
+    exif.setAttribute(ExifInterface.TAG_EXIF_VERSION, null)
+    exif.setAttribute(ExifInterface.TAG_IMAGE_DESCRIPTION, null)
+    exif.setAttribute(ExifInterface.TAG_IMAGE_UNIQUE_ID, null)
+    exif.setAttribute(ExifInterface.TAG_LENS_MAKE, null)
+    exif.setAttribute(ExifInterface.TAG_LENS_MODEL, null)
+    exif.setAttribute(ExifInterface.TAG_LENS_SERIAL_NUMBER, null)
+    exif.setAttribute(ExifInterface.TAG_LENS_SPECIFICATION, null)
+    exif.setAttribute(ExifInterface.TAG_MAKE, null)
+    exif.setAttribute(ExifInterface.TAG_MAKER_NOTE, null)
+    exif.setAttribute(ExifInterface.TAG_MODEL, null)
+    exif.setAttribute(ExifInterface.TAG_SOFTWARE, null)
+    exif.setAttribute(ExifInterface.TAG_USER_COMMENT, null)
+    exif.setAttribute(ExifInterface.TAG_BODY_SERIAL_NUMBER, null)
+    exif.setAttribute(ExifInterface.TAG_DATETIME, null)
+    exif.setAttribute(ExifInterface.TAG_DATETIME_DIGITIZED, null)
+    exif.setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, null)
+    exif.setAttribute(ExifInterface.TAG_DEVICE_SETTING_DESCRIPTION, null)
+    exif.setAttribute(ExifInterface.TAG_RELATED_SOUND_FILE, null)
+    exif.setLatLong(0.0, 0.0)
+    exif.setGpsInfo(null)
 }
 private fun showExif(exif: ExifInterface) : String {
     exif.setAttribute(ExifInterface.TAG_IMAGE_DESCRIPTION, "Good Image")
