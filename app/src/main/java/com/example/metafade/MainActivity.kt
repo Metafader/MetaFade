@@ -1,20 +1,27 @@
 package com.example.metafade
 
-import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -28,6 +35,7 @@ import coil.compose.AsyncImage
 import com.example.metafade.ui.theme.MetaFadeTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -38,15 +46,15 @@ class MainActivity : ComponentActivity() {
                 var selectedImageUris by remember {
                     mutableStateOf<List<Uri>>(emptyList())
                 }
-
-                val singlePhotoPickerLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.PickVisualMedia(),
-                    onResult = {uri -> selectedImageUri = uri }
-                )
                 
+                val singlePhotoPickerLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocument(),
+                    onResult = {selectedImageUri = it}
+                )
+
                 val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.PickMultipleVisualMedia(),
-                    onResult = {uris -> selectedImageUris = uris}
+                    contract = ActivityResultContracts.OpenMultipleDocuments(),
+                    onResult = {selectedImageUris = it}
                 )
 
                 // Changing composable for UI
@@ -54,12 +62,8 @@ class MainActivity : ComponentActivity() {
                     MyApp(
                         modifier = Modifier.fillMaxSize(),
                         // Passing callbacks(functions) down for state hoisting
-                        onSingleButtonClicked = { singlePhotoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )},
-                        onMultipleButtonClicked = { multiplePhotoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )}
+                        onSingleButtonClicked = { singlePhotoPickerLauncher.launch(arrayOf("image/*"))},
+                        onMultipleButtonClicked = {multiplePhotoPickerLauncher.launch(arrayOf("image/*"))}
                     )
                 else
                     ShowSelectedImages(
@@ -139,20 +143,7 @@ fun ShowSelectedImages(
 
         if(selectedImageUri != null)
             item {
-                AsyncImage(
-                    model = selectedImageUri,
-                    contentDescription = null,
-                    modifier = Modifier.padding(3.dp),
-                    contentScale = ContentScale.Fit
-                )
-
-                val uriPath = selectedImageUri.path
-                val exif = ExifInterface(uriPath!!)
-
-                Text(
-                    text = showExif(exif),
-                    modifier = Modifier.padding(3.dp)
-                )
+                ShowImageMeta(uri = selectedImageUri)
             }
 
         else
@@ -162,19 +153,19 @@ fun ShowSelectedImages(
     }
 }
 
-@SuppressLint("Recycle")
+
 @Composable
 private fun ShowImageMeta(uri: Uri) {
     
-    var showMeta by rememberSaveable() {
+    var showMeta by rememberSaveable {
         mutableStateOf(false)
     }
 
-    var defaultConfigurationSave by rememberSaveable() {
+    var defaultConfigurationSave by rememberSaveable {
         mutableStateOf(true)
     }
-
-    val exif = ExifInterface(LocalContext.current.applicationContext.contentResolver.openFileDescriptor(uri, "rw")?.fileDescriptor!!)
+    val parceableFileDes = LocalContext.current.applicationContext.contentResolver.openFileDescriptor(uri, "rw")
+    val exif = ExifInterface(parceableFileDes?.fileDescriptor!!)
 
     AsyncImage(
         model = uri,
@@ -189,13 +180,18 @@ private fun ShowImageMeta(uri: Uri) {
             modifier = Modifier.padding(3.dp)
         )
     else
-        Button(onClick = { showMeta = true}) {
+        Button(onClick = { showMeta = !showMeta }) {
             Text(text = "Show MetaData")
         }
 
-    Button(onClick = {defaultConfigurationSave = !defaultConfigurationSave}) {
+    Button(onClick = { defaultConfigurationSave = !defaultConfigurationSave }) {
         Text(text = if (defaultConfigurationSave) "Save on Device" else "Save on Device & Cloud" )
     }
+
+    if(defaultConfigurationSave)
+        defaultConfiguration(exif)
+
+    parceableFileDes.close()
 }
 
 private fun defaultConfiguration(exif: ExifInterface) {
@@ -222,9 +218,10 @@ private fun defaultConfiguration(exif: ExifInterface) {
     exif.setAttribute(ExifInterface.TAG_RELATED_SOUND_FILE, null)
     exif.setLatLong(0.0, 0.0)
     exif.setGpsInfo(null)
+
+    exif.saveAttributes()
 }
 private fun showExif(exif: ExifInterface) : String {
-    exif.setAttribute(ExifInterface.TAG_IMAGE_DESCRIPTION, "Good Image")
 
     val metadataString = StringBuilder()
     metadataString.append("Latitude Longitude : ").append(exif.latLong).append(" \n")
@@ -240,7 +237,6 @@ private fun showExif(exif: ExifInterface) : String {
     metadataString.append("Flash : ").append(exif.getAttribute(ExifInterface.TAG_FLASH)).append(" \n")
     metadataString.append("File Source : ").append(exif.getAttribute(ExifInterface.TAG_FILE_SOURCE)).append(" \n")
 
-//    exif.saveAttributes()
     return metadataString.toString()
 }
 
