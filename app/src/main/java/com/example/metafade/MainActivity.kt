@@ -2,6 +2,7 @@ package com.example.metafade
 
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -137,6 +138,10 @@ fun ShowSelectedImages(
     selectedImageUris: List<Uri>
     ) {
 
+    var onProceedClicked by remember {
+        mutableStateOf(false)
+    }
+
     Column {
         Row(
             Modifier
@@ -152,7 +157,10 @@ fun ShowSelectedImages(
                 Text("Clear")
             }
 
-            Button(onClick = { /*TODO*/ },
+            val context = LocalContext.current
+            Button(onClick = { onProceedClicked = true
+                Toast.makeText(context, "The MetaData of Images is removed", Toast.LENGTH_SHORT).show()
+                             },
                 modifier
                     .padding(vertical = 2.dp)
                     .weight(1f)) {
@@ -165,12 +173,12 @@ fun ShowSelectedImages(
         ) {
             if(selectedImageUri != null)
                 item {
-                    ShowImageMeta(uri = selectedImageUri)
+                    ShowImageMeta(uri = selectedImageUri, onProceedClicked, onClearButtonClicked)
                 }
 
             else
                 items(selectedImageUris) { uri->
-                    ShowImageMeta(uri = uri)
+                    ShowImageMeta(uri = uri, onProceedClicked, onClearButtonClicked)
                 }
         }
     }
@@ -179,17 +187,20 @@ fun ShowSelectedImages(
 
 
 @Composable
-private fun ShowImageMeta(uri: Uri) {
-    
+private fun ShowImageMeta(uri: Uri,
+                          proceedSave: Boolean,
+                          onClearButtonClicked: ()->Unit) {
+
+    val parceableFileDes = LocalContext.current.applicationContext.contentResolver.openFileDescriptor(uri, "rw")
+    val exif = ExifInterface(parceableFileDes?.fileDescriptor!!)
+
     var showMeta by rememberSaveable {
         mutableStateOf(false)
     }
 
-    var defaultConfigurationSave by rememberSaveable {
-        mutableStateOf(true)
-    }
-    val parceableFileDes = LocalContext.current.applicationContext.contentResolver.openFileDescriptor(uri, "rw")
-    val exif = ExifInterface(parceableFileDes?.fileDescriptor!!)
+//    var defaultConfigurationSave by rememberSaveable {
+//        mutableStateOf(true)
+//    }
 
     Card(modifier = Modifier.padding(horizontal = 1.dp, vertical = 10.dp)) {
 
@@ -203,14 +214,16 @@ private fun ShowImageMeta(uri: Uri) {
                 contentScale = ContentScale.Fit
             )
 
-            Button(onClick = { defaultConfigurationSave = !defaultConfigurationSave },
-                modifier = Modifier.fillMaxWidth()
-                    .padding(horizontal = 10.dp)) {
-                Text(text = if (defaultConfigurationSave) "Save on Device" else "Save on Device & Cloud" )
-            }
+//            Button(onClick = { defaultConfigurationSave = !defaultConfigurationSave },
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(horizontal = 10.dp)) {
+//                Text(text = if (defaultConfigurationSave) "Save on Device" else "Save on Device & Cloud" )
+//            }
 
             Button(onClick = { showMeta = !showMeta },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
                     .padding(horizontal = 10.dp)) {
                 Text(text = if(showMeta) "Hide MetaData" else "Show MetaData")
             }
@@ -228,8 +241,11 @@ private fun ShowImageMeta(uri: Uri) {
         }
     }
 
-    if(defaultConfigurationSave)
+    if (proceedSave) {
         defaultConfiguration(exif)
+        parceableFileDes.close()
+        onClearButtonClicked()
+    }
 
     parceableFileDes.close()
 }
